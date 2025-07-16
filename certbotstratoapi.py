@@ -154,16 +154,36 @@ class CertbotStratoApi:
             "password": password,
         }
 
-        request = self.http_session.post(self.api_url, data=data)
-        if "auth_server_session" not in self.http_session.cookies:
-            print("ERROR: Could not retrieve auth_server_session cookie from Strato.")
+        request = self.http_session.post("https://login.stratoserver.net/login", data=data)
+        if "PHPSESSID" not in self.http_session.cookies:
+            print("ERROR: Could not retrieve PHPSESSID cookie from Strato.")
             return False
         
-        # Check 2FA Login
-        request = self.login_2fa(request, username, totp_secret, totp_devicename)
+        request = self.http_session.get(
+            "https://config.strato.de/domainuebersicht",
+        )
 
-        self.session_id = self.http_session.cookies["auth_server_session"]
-        print(f"DEBUG: session_id: {self.session_id}")
+        soup = BeautifulSoup(request.text, "html.parser")
+        iframe = soup.find("iframe", id="ksbIframe")
+        if iframe and iframe.has_attr("src"):
+            iframe_src = iframe["src"]
+            print(f"INFO: Found iframe src: {iframe_src}")
+        else:
+            print("ERROR: Could not find iframe with id 'ksbIframe' in domain overview.")
+
+        request = self.http_session.get(
+            iframe_src,
+        )
+
+        parsed_iframe_url = urllib.parse.urlparse(iframe_src)
+        iframe_query_params = urllib.parse.parse_qs(parsed_iframe_url.query)
+        session_id = iframe_query_params.get("sessionID", [None])[0]
+        if session_id is None:
+            print("ERROR: Could not retrieve sessionID from iframe src.")
+            return False
+        self.session_id = session_id
+        print(f"DEBUG: session_id from iframe_src: {self.session_id}")
+
         return True
 
     def get_package_id(self) -> None:
