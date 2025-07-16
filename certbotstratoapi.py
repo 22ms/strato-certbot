@@ -167,7 +167,6 @@ class CertbotStratoApi:
         iframe = soup.find("iframe", id="ksbIframe")
         if iframe and iframe.has_attr("src"):
             iframe_src = iframe["src"]
-            print(f"INFO: Found iframe src: {iframe_src}")
         else:
             print("ERROR: Could not find iframe with id 'ksbIframe' in domain overview.")
 
@@ -182,7 +181,6 @@ class CertbotStratoApi:
             print("ERROR: Could not retrieve sessionID from iframe src.")
             return False
         self.session_id = session_id
-        print(f"DEBUG: session_id from iframe_src: {self.session_id}")
 
         return True
 
