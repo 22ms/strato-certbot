@@ -19,6 +19,7 @@
                 buildInputs = with pkgs; [
                     python312
                     python312Packages.pyotp
+                    python312Packages.requests
                     python312Packages.beautifulsoup4
                 ];
             in

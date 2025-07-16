@@ -133,24 +133,36 @@ class CertbotStratoApi:
 
         """
         # request session id
-        self.http_session.get(self.api_url)
+        request = self.http_session.get("https://config.strato.de/auth/connect")
+        if request.history and request.status_code == 200:
+            login_url = request.url
+        else:
+            login_url = "https://config.strato.de/auth/connect"
+
+        parsed_login_url = urllib.parse.urlparse(login_url)
+        login_query_params = urllib.parse.parse_qs(parsed_login_url.query)
+        data_param = login_query_params.get("data", [None])[0]
+
+        if data_param is None:
+            print("ERROR: Could not retrieve login data from Strato.")
+            return False
+
         data = {
-            "identifier": username,
-            "passwd": password,
-            "action_customer_login.x": "Login",
+            "strato_locale": "de",
+            "data": data_param,
+            "username": username,
+            "password": password,
         }
 
         request = self.http_session.post(self.api_url, data=data)
-
+        if "auth_server_session" not in self.http_session.cookies:
+            print("ERROR: Could not retrieve auth_server_session cookie from Strato.")
+            return False
+        
         # Check 2FA Login
         request = self.login_2fa(request, username, totp_secret, totp_devicename)
 
-        # Check successful login
-        parsed_url = urllib.parse.urlparse(request.url)
-        query_parameters = urllib.parse.parse_qs(parsed_url.query)
-        if "sessionID" not in query_parameters:
-            return False
-        self.session_id = query_parameters["sessionID"][0]
+        self.session_id = self.http_session.cookies["auth_server_session"]
         print(f"DEBUG: session_id: {self.session_id}")
         return True
 
